@@ -41,7 +41,7 @@ class MenuScreen extends StatefulWidget {
 class _MenuScreenState extends State<MenuScreen> {
   Future<List<dynamic>?> fetchMenu() async {
     final response =
-    await http.get(Uri.parse('http://192.168.100.155/flutter/fetch_menu.php'));
+    await http.get(Uri.parse('http://192.168.100.119/flutter/fetch_menu.php'));
     if (response.statusCode == 200) {
       return json.decode(response.body);
     } else {
@@ -82,48 +82,92 @@ class _MenuScreenState extends State<MenuScreen> {
                       enlargeCenterPage: true,
                       autoPlay: true,
                     ),
-                    items: primaryItems.map((item) {
-                      return Builder(
+                    items: [
+                      ...primaryItems.map((item) {
+                        return Builder(
+                          builder: (BuildContext context) {
+                            return Container(
+                              width: MediaQuery.of(context).size.width,
+                              margin: EdgeInsets.symmetric(horizontal: 20.9),
+                              decoration: BoxDecoration(
+                                color: Colors.black45,
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: Image.network(
+                                        item['image_url'],
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(height: 2), // Add space here
+                                  Text(
+                                    item['name'],
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  Text(
+                                    item['description'],
+                                    style: TextStyle(fontSize: 16),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  Text(
+                                    '\$${item['price']}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.brown,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
+                      Builder(
                         builder: (BuildContext context) {
                           return Container(
                             width: MediaQuery.of(context).size.width,
-                            margin: EdgeInsets.symmetric(horizontal: 5.0),
+                            margin: EdgeInsets.symmetric(horizontal: 20.9),
                             decoration: BoxDecoration(
-                              color: Colors.grey,
+                              color: Colors.black45,
                               borderRadius: BorderRadius.circular(15),
                             ),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
+                                SizedBox(height: 10), // Add space here
                                 Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(15),
-                                    child: Image.network(
-                                      item['image_url'],
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      _selectImage(context);
+                                    },
+                                    child: _image == null
+                                        ? Icon(Icons.add_a_photo,
+                                        size: 50, color: Colors.white)
+                                        : Image.file(
+                                      _image!,
                                       fit: BoxFit.cover,
                                     ),
                                   ),
                                 ),
-                                SizedBox(height: 8),
+                                SizedBox(height: 10), // Add space here
                                 Text(
-                                  item['name'],
+                                  "Add Image",
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                Text(
-                                  item['description'],
-                                  style: TextStyle(fontSize: 16),
-                                  textAlign: TextAlign.center,
-                                ),
-                                Text(
-                                  '\$${item['price']}',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.brown,
+                                    color: Colors.white,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -131,12 +175,13 @@ class _MenuScreenState extends State<MenuScreen> {
                             ),
                           );
                         },
-                      );
-                    }).toList(),
+                      ),
+                    ],
                   ),
                 ),
 
                 // List of remaining items
+                SizedBox(height: 100),
                 ListView.builder(
                   shrinkWrap: true,
                   itemCount: remainingItems.length,
@@ -145,17 +190,19 @@ class _MenuScreenState extends State<MenuScreen> {
                     return ListTile(
                       title: Text(item['name']),
                       subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(item['description']),
                           Text('\$${item['price']}'),
                         ],
                       ),
+
                       leading: Container(
-                        width: 100,
-                        height: 100,
+                        width: 120, // I-adjust ang lapad ayon sa iyong pangangailangan
+                        height: 200, // I-adjust ang taas ayon sa iyong pangangailangan
+                        margin: EdgeInsets.only(left: 16.0, bottom: 16.0), // Magdagdag ng margin para sa spacing
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(10),
                           image: DecorationImage(
                             image: NetworkImage(item['image_url']),
                             fit: BoxFit.cover,
@@ -182,6 +229,27 @@ class _MenuScreenState extends State<MenuScreen> {
         child: Icon(Icons.add),
       ),
     );
+  }
+
+  File? _image;
+
+  Future<void> _selectImage(BuildContext context) async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Image picker not supported on web.'),
+        ),
+      );
+      return;
+    }
+
+    final pickedFile =
+    await ImagePicker().getImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
   }
 }
 
@@ -268,25 +336,6 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
     );
   }
 
-  Future<void> _selectImage(BuildContext context) async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Image picker not supported on web.'),
-        ),
-      );
-      return;
-    }
-
-    final pickedFile =
-    await ImagePicker().getImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
-    }
-  }
-
   Future<void> _addMenuItem(
       String name, String description, double price) async {
     // Prepare the payload
@@ -305,8 +354,7 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
     print('Request Payload: $data'); // Debug print
 
     // Send the request
-    var uri =
-    Uri.parse('http://192.168.100.155/flutter/create_menu.php');
+    var uri = Uri.parse('http://192.168.100.119/flutter/create_menu.php');
     var request = http.MultipartRequest('POST', uri);
     request.fields.addAll(data);
 
@@ -339,6 +387,25 @@ class _AddMenuItemScreenState extends State<AddMenuItemScreen> {
       // Read and print the response body for further analysis
       await response.stream.bytesToString().then(print);
       throw Exception('Failed to add menu item');
+    }
+  }
+
+  Future<void> _selectImage(BuildContext context) async {
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Image picker not supported on web.'),
+        ),
+      );
+      return;
+    }
+
+    final pickedFile =
+    await ImagePicker().getImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
     }
   }
 }
